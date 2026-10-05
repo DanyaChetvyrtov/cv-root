@@ -1,0 +1,40 @@
+name: Full stack Docker Compose
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Validate the single Compose entry point
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          files = sorted(str(path) for pattern in ("compose*.yml", "compose*.yaml", "docker-compose*.yml", "docker-compose*.yaml") for path in Path(".").rglob(pattern))
+          assert files == ["compose.yaml"], f"Unexpected Compose files: {files}"
+          PY
+          docker compose config --quiet
+      - name: Build and start the whole project
+        run: docker compose up --build --detach --wait --wait-timeout 600
+      - name: Verify web proxy and real CV inference
+        run: python3 scripts/smoke_test.py
+      - name: Verify real Keycloak authentication and roles
+        run: python3 keycloak-integration-test/scripts/smoke_test.py
+      - name: Show service logs on failure
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color --tail=200
+      - name: Stop the project
+        if: always()
+        run: docker compose down --volumes

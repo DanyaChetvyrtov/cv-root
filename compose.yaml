@@ -1,9 +1,10 @@
-﻿name: cv-complex-test
+name: cv-complex-test
 
 services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.8.0
     command: ["start-dev", "--import-realm"]
+    restart: unless-stopped
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
@@ -18,7 +19,7 @@ services:
       test:
         - CMD
         - /bin/bash
-        - -c
+        - -ec
         - "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; read -r response <&3; [[ $$response == *'200 OK'* ]]"
       interval: 5s
       timeout: 3s
@@ -27,6 +28,7 @@ services:
 
   api:
     build: ./keycloak-integration-test
+    restart: unless-stopped
     environment:
       KEYCLOAK_ISSUER_URI: http://localhost:8081/realms/demo
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/demo/protocol/openid-connect/certs
@@ -35,9 +37,21 @@ services:
     depends_on:
       keycloak:
         condition: service_healthy
+        restart: true
+    healthcheck:
+      test:
+        - CMD
+        - /bin/bash
+        - -ec
+        - "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /actuator/health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; read -r response <&3; [[ $$response == *'200 OK'* ]]"
+      interval: 5s
+      timeout: 3s
+      start_period: 30s
+      retries: 30
 
   cv:
     build: ./cv-test
+    restart: unless-stopped
     environment:
       CV_DEVICE: cpu
       CV_MODEL_PATH: /app/models/yolo11n.pt
@@ -45,18 +59,33 @@ services:
       - "127.0.0.1:${CV_PORT:-8000}:8000"
     volumes:
       - model-cache:/app/models
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      start_period: 120s
+      retries: 36
 
   web:
     build: ./cv-web
+    restart: unless-stopped
     ports:
       - "127.0.0.1:5173:80"
     depends_on:
-      - api
-      - cv
+      api:
+        condition: service_healthy
+        restart: true
+      cv:
+        condition: service_healthy
+        restart: true
 
 volumes:
+  # Reuse data created by the earlier standalone module Compose files.
   keycloak-data:
     name: keycloak-integration-test_keycloak-data
   model-cache:
     name: cv-test_model-cache
-
