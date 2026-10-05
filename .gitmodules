@@ -1,0 +1,12 @@
+[submodule "cv-test"]
+	path = cv-test
+	url = https://github.com/DanyaChetvyrtov/cv-test.git
+	branch = main
+[submodule "cv-web"]
+	path = cv-web
+	url = https://github.com/DanyaChetvyrtov/cv-web.git
+	branch = main
+[submodule "keycloak-integration-test"]
+	path = keycloak-integration-test
+	url = https://github.com/DanyaChetvyrtov/keycloak-integration-test.git
+	branch = main
