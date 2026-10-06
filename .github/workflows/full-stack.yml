@@ -16,6 +16,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: Validate the single Compose entry point
         run: |
           python3 - <<'PY'
@@ -27,7 +30,15 @@ jobs:
       - name: Build and start the whole project
         run: docker compose up --build --detach --wait --wait-timeout 600
       - name: Verify BFF sessions, Keycloak, CSRF and real CV inference
-        run: python3 scripts/smoke_test.py
+        run: |
+          python -m pip install 'Pillow>=11,<13'
+          python cv-test/scripts/fetch_test_face.py /tmp/cv-test-face.png
+          python scripts/smoke_test.py --face-image /tmp/cv-test-face.png --persistence-state /tmp/cv-employee-state.json
+      - name: Verify employee persistence and cached face models after restart
+        run: |
+          docker compose restart api cv
+          docker compose up --detach --wait --wait-timeout 180
+          python scripts/smoke_test.py --face-image /tmp/cv-test-face.png --persistence-state /tmp/cv-employee-state.json --verify-persistence
       - name: Show service logs on failure
         if: failure()
         run: |
