@@ -5,6 +5,7 @@
 React обращается только к Kotlin BFF. BFF управляет OIDC-сессией с Keycloak и вызывает внутренний Python CV.
 Access/refresh-токены хранятся в серверной HTTP-сессии; браузер получает HttpOnly-cookie `BFFSESSION`.
 Вход и регистрация открывают формы Keycloak через редирект BFF. React не обменивает код на токены и не знает адрес CV.
+Keycloak использует кастомную тему `cv-access`, визуально повторяющую тёмную зелёно-синюю стилистику React-приложения.
 
 ## Сотрудники и проверка по лицу
 
@@ -50,7 +51,7 @@ docker compose up --build --detach --wait --wait-timeout 600
 
 Первый запуск скачивает образы, зависимости и веса YuNet/SFace. Java, Gradle, Node.js и Python на хосте не нужны.
 Compose запускает пять основных сервисов и одноразовый `keycloak-init`.
-Инициализатор создаёт/обновляет confidential-клиент `demo-bff`, роли и регистрацию, отключает прежние
+Инициализатор создаёт/обновляет confidential-клиент `demo-bff`, роли, регистрацию и тему `cv-access`, отключает прежние
 `demo-browser`/`demo-cli`, **сохраняя существующих пользователей и их роли**. Удалять volumes при обновлении не нужно.
 
 | Сервис | Адрес |
@@ -173,3 +174,19 @@ git push
 Там нужны HTTPS, `SESSION_COOKIE_SECURE=true`, PostgreSQL для Keycloak, защищённые secrets и разрешённые callback/logout URL.
 HTTP-сессии BFF сейчас в памяти одного экземпляра: перезапуск завершит их; для нескольких экземпляров нужен общий session store.
 MFA настраивается политиками Keycloak, в этом demo принудительно не включена.
+
+
+## Keycloak theme
+
+Формы входа, регистрации и остальные страницы login flow используют тему `cv-access` из
+`keycloak-integration-test/keycloak/themes/cv-access`. Тема наследует штатные шаблоны Keycloak и меняет только presentation layer:
+фон, карточку, типографику, поля, кнопки, ссылки и сообщения об ошибках. Это позволяет сохранить стандартный OIDC flow,
+MFA/required actions и встроенную валидацию Keycloak без копирования FreeMarker-шаблонов.
+
+После обновления темы достаточно перезапустить Keycloak:
+
+```bash
+docker compose restart keycloak keycloak-init
+```
+
+Для полной пересборки стенда используйте обычный `docker compose up --build --detach --wait --wait-timeout 600`.
