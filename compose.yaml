@@ -26,18 +26,40 @@ services:
       start_period: 60s
       retries: 30
 
+  keycloak-init:
+    image: python:3.12-slim
+    command: ["python", "/setup/scripts/configure_bff.py"]
+    environment:
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_ADMIN_USERNAME: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-local-bff-secret}
+      BFF_PUBLIC_URL: http://127.0.0.1:5173
+    volumes:
+      - ./keycloak-integration-test/scripts:/setup/scripts:ro
+      - ./keycloak-integration-test/keycloak:/setup/keycloak:ro
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
   api:
     build: ./keycloak-integration-test
     restart: unless-stopped
     environment:
       KEYCLOAK_ISSUER_URI: http://localhost:8081/realms/demo
-      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/demo/protocol/openid-connect/certs
+      KEYCLOAK_INTERNAL_BASE_URI: http://keycloak:8080/realms/demo
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-local-bff-secret}
+      BFF_PUBLIC_URL: http://127.0.0.1:5173
+      CV_SERVICE_URL: http://cv:8000
+      SESSION_COOKIE_SECURE: "false"
     ports:
       - "127.0.0.1:${API_PORT:-8080}:8080"
     depends_on:
       keycloak:
         condition: service_healthy
         restart: true
+      keycloak-init:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
@@ -55,8 +77,8 @@ services:
     environment:
       CV_DEVICE: cpu
       CV_MODEL_PATH: /app/models/yolo11n.pt
-    ports:
-      - "127.0.0.1:${CV_PORT:-8000}:8000"
+    expose:
+      - "8000"
     volumes:
       - model-cache:/app/models
     healthcheck:

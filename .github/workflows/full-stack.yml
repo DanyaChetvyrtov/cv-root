@@ -26,10 +26,8 @@ jobs:
           docker compose config --quiet
       - name: Build and start the whole project
         run: docker compose up --build --detach --wait --wait-timeout 600
-      - name: Verify web proxy and real CV inference
+      - name: Verify BFF sessions, Keycloak, CSRF and real CV inference
         run: python3 scripts/smoke_test.py
-      - name: Verify real Keycloak authentication and roles
-        run: python3 keycloak-integration-test/scripts/smoke_test.py
       - name: Show service logs on failure
         if: failure()
         run: |
