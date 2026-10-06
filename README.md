@@ -48,7 +48,7 @@ git submodule update --init --recursive
 docker compose up --build --detach --wait --wait-timeout 600
 ```
 
-Первый запуск скачивает образы, зависимости и веса YOLO. Java, Gradle, Node.js и Python на хосте не нужны.
+Первый запуск скачивает образы, зависимости и веса YuNet/SFace. Java, Gradle, Node.js и Python на хосте не нужны.
 Compose запускает пять основных сервисов и одноразовый `keycloak-init`.
 Инициализатор создаёт/обновляет confidential-клиент `demo-bff`, роли и регистрацию, отключает прежние
 `demo-browser`/`demo-cli`, **сохраняя существующих пользователей и их роли**. Удалять volumes при обновлении не нужно.
