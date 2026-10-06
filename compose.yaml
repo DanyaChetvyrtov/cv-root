@@ -20,7 +20,7 @@ services:
         - CMD
         - /bin/bash
         - -ec
-        - "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; read -r response <&3; [[ $$response == *'200 OK'* ]]"
+        - "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; read -r response <&3; [[ $$response =~ ^HTTP/[0-9.]+[[:space:]]+200([[:space:]]|$$) ]]"
       interval: 5s
       timeout: 3s
       start_period: 60s
@@ -65,7 +65,7 @@ services:
         - CMD
         - /bin/bash
         - -ec
-        - "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /actuator/health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; read -r response <&3; [[ $$response == *'200 OK'* ]]"
+        - "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /actuator/health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; read -r response <&3; [[ $$response =~ ^HTTP/[0-9.]+[[:space:]]+200([[:space:]]|$$) ]]"
       interval: 5s
       timeout: 3s
       start_period: 30s
